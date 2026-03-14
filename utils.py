@@ -142,7 +142,6 @@ def format_result_text(algo_name, result, is_best=False):
 
     return text
 
-
 def export_results_to_csv(results, filename='results.csv'):
     """
     Export results to CSV file
@@ -164,3 +163,132 @@ def export_results_to_csv(results, filename='results.csv'):
                 f"{result['avg_seek_time']:.2f}",
                 len(result['sequence'])
             ])
+
+
+def export_results_to_pdf(results, inputs, filename='results.pdf'):
+    """
+    Export results to a professional PDF report using matplotlib
+
+    Args:
+        results (dict): Results from all algorithms
+        inputs (dict): Original input parameters
+        filename (str): Output filename
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+    import datetime
+
+    # Theming (matching the app's dark professional look but optimized for PDF/print)
+    primary_color = "#1565C0"  # Professional blue
+    accent_color = "#3DDC84"   # Success green
+    text_color = "#333333"
+    grid_color = "#EEEEEE"
+
+    with PdfPages(filename) as pdf:
+        # Create a figure for the report
+        fig = plt.figure(figsize=(8.5, 11))
+        
+        # 1. Header Section
+        plt.text(0.5, 0.96, "Disk Scheduling Algorithm Visualizer — Report", 
+                 ha='center', va='top', fontsize=18, fontweight='bold', color=primary_color)
+        plt.text(0.5, 0.93, f"Generated on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", 
+                 ha='center', va='top', fontsize=10, color="#777777")
+        plt.axhline(0.91, color=primary_color, linewidth=2)
+
+        # 2. Input Parameters Section
+        plt.text(0.05, 0.88, "Input Parameters", fontsize=14, fontweight='bold', color=primary_color)
+        
+        param_y = 0.85
+        params = [
+            ("Request Queue", f"[{', '.join(map(str, inputs.get('requests', [])))}]"),
+            ("Initial Head", f"{inputs.get('head_start', 'N/A')}"),
+            ("Disk Size", f"{inputs.get('disk_size', 'N/A')} cylinders"),
+            ("Direction", f"{inputs.get('direction', 'N/A').upper()}"),
+            ("Total Requests", f"{len(inputs.get('requests', []))}")
+        ]
+        
+        for label, val in params:
+            plt.text(0.08, param_y, f"{label}:", fontsize=10, fontweight='bold', color=text_color)
+            plt.text(0.3, param_y, val, fontsize=10, color=text_color)
+            param_y -= 0.025
+
+        # 3. Comparative Summary Table
+        plt.text(0.05, 0.72, "Comparative Summary (Ranked by Efficiency)", fontsize=14, fontweight='bold', color=primary_color)
+        
+        sorted_results = sorted(results.items(), key=lambda x: x[1]['seek_count'])
+        
+        # Define table data
+        col_labels = ['Rank', 'Algorithm', 'Total Seek Count', 'Avg Seek Time', 'Efficiency']
+        table_data = []
+        best_seek = sorted_results[0][1]['seek_count']
+        
+        for i, (name, res) in enumerate(sorted_results):
+            efficiency = "Best" if i == 0 else f"-{((res['seek_count'] - best_seek) / best_seek * 100):.1f}%"
+            table_data.append([
+                i + 1,
+                name,
+                f"{res['seek_count']} cyl",
+                f"{res['avg_seek_time']:.2f}",
+                efficiency
+            ])
+
+        # Create table
+        table = plt.table(cellText=table_data, colLabels=col_labels, 
+                          loc='center', bbox=[0.05, 0.52, 0.9, 0.18])
+        table.auto_set_font_size(False)
+        table.set_fontsize(9)
+        
+        # Style table header
+        for (row, col), cell in table.get_celld().items():
+            if row == 0:
+                cell.set_text_props(weight='bold', color='white')
+                cell.set_facecolor(primary_color)
+            elif row == 1:
+                cell.set_facecolor("#EBF5FB") # Light blue for best
+            else:
+                cell.set_facecolor('white')
+
+        # 4. Visualization/Chart Section
+        plt.text(0.05, 0.48, "Seek Count Comparison Chart", fontsize=14, fontweight='bold', color=primary_color)
+        
+        # Create a subplot area for the bar chart
+        ax = fig.add_axes([0.12, 0.28, 0.76, 0.18])
+        names = [x[0] for x in sorted_results]
+        counts = [x[1]['seek_count'] for x in sorted_results]
+        
+        # Consistent colors from the GUI
+        algo_colors = {
+            "FCFS": "#4F8EF7", "SSTF": "#F7C948", "SCAN": "#3DDC84",
+            "C-SCAN": "#FF8C42", "C-LOOK": "#A78BFA", "LOOK": "#FF6B8A"
+        }
+        bar_colors = [algo_colors.get(n, primary_color) for n in names]
+        
+        bars = ax.bar(names, counts, color=bar_colors, alpha=0.8, edgecolor="#555555")
+        ax.set_ylabel("Total Seek Count", fontsize=9)
+        ax.set_title("Total Head Movement by Algorithm", fontsize=10)
+        ax.grid(axis='y', linestyle='--', alpha=0.7)
+        
+        # Add labels on top of bars
+        for bar in bars:
+            yval = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2, yval + 1, int(yval), ha='center', va='bottom', fontsize=8)
+
+        # 5. Conclusion Note
+        plt.text(0.05, 0.2, "Conclusion:", fontsize=12, fontweight='bold', color=primary_color)
+        rec_text = (f"The analysis identifies {sorted_results[0][0]} as the most efficient algorithm for this specific request queue, "
+                    f"achieving the minimum seek count of {best_seek} cylinders. Using {sorted_results[0][0]} provides better "
+                    f"disk I/O performance and reduced mechanical wear compared to the other tested algorithms.")
+        
+        # Wrap text manually for simplicity
+        plt.text(0.05, 0.14, rec_text, fontsize=10, color=text_color, wrap=True,
+                 bbox=dict(boxstyle='round,pad=1', facecolor='#F9F9F9', edgecolor=accent_color))
+
+        # 6. Footer
+        plt.text(0.5, 0.04, "Educational Tool — Disk Scheduling Algorithms", ha='center', fontsize=8, color="#AAAAAA")
+        
+        # Hide the main figure axes
+        plt.gca().axis('off')
+        
+        # Save the page
+        pdf.savefig(fig)
+        plt.close(fig)

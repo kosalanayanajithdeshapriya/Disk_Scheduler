@@ -1,6 +1,6 @@
 """
 Disk Scheduling Algorithms Implementation
-Contains: FCFS, SCAN, C-SCAN, LOOK, C-LOOK
+Contains: FCFS, SSTF, SCAN, C-SCAN, C-LOOK
 """
 
 class DiskScheduler:
@@ -287,19 +287,46 @@ class DiskScheduler:
             'avg_seek_time': seek_count / len(self.requests) if self.requests else 0
         }
 
+    def sstf(self):
+        """
+        Shortest Seek Time First (SSTF) Algorithm
+        Always services the request nearest to the current head position.
+
+        Returns:
+            dict: Contains sequence, seek_count, and avg_seek_time
+        """
+        remaining  = self.requests.copy()
+        head       = self.head_start
+        sequence   = [head]
+        seek_count = 0
+
+        while remaining:
+            # Find the closest request to current head
+            closest = min(remaining, key=lambda r: abs(r - head))
+            seek_count += abs(closest - head)
+            head = closest
+            sequence.append(head)
+            remaining.remove(closest)
+
+        return {
+            'sequence':      sequence,
+            'seek_count':    seek_count,
+            'avg_seek_time': seek_count / len(self.requests) if self.requests else 0,
+        }
+
     def get_all_results(self):
         """
-        Calculate results for all algorithms
+        Calculate results for all algorithms.
 
         Returns:
             dict: Results for all 5 algorithms
         """
         return {
-            'FCFS': self.fcfs(),
-            'SCAN': self.scan(),
+            'FCFS':   self.fcfs(),
+            'SSTF':   self.sstf(),
+            'SCAN':   self.scan(),
             'C-SCAN': self.cscan(),
-            'LOOK': self.look(),
-            'C-LOOK': self.clook()
+            'C-LOOK': self.clook(),
         }
 
     def get_best_algorithm(self):
