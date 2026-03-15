@@ -1053,11 +1053,6 @@ class ComparisonChart:
         ax3.set_xlabel("Total Seek Count", fontsize=10, fontweight="bold")
         ax3.set_title("Efficiency Ranking\n(Best at Top)", fontsize=11, fontweight="bold", pad=10)
 
-        fig.suptitle(
-            "Algorithm Performance Comparison",
-            fontsize=13, fontweight="bold",
-            color=DARK_TEXT, y=1.02,
-        )
         # Prevent label overlap in middle chart too
         ax2.tick_params(axis='x', rotation=30)
         
